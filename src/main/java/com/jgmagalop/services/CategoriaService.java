@@ -14,12 +14,18 @@ public class CategoriaService {
 
     private final CategoriaRepository repo;
     private final TransaccionRepository transaccionRepo;
+    private final PresupuestoRepository presupuestoRepo;
     private final UsuarioActual usuarioActual;
 
-    public CategoriaService(CategoriaRepository repo, UsuarioActual usuarioActual, TransaccionRepository transaccionRepo) {
+    public CategoriaService( CategoriaRepository repo, 
+    						 UsuarioActual usuarioActual, 
+    						 TransaccionRepository transaccionRepo,
+    						 PresupuestoRepository presupuestoRepo
+    						) {
         this.repo = repo;
         this.usuarioActual = usuarioActual;
         this.transaccionRepo = transaccionRepo;
+        this.presupuestoRepo = presupuestoRepo;
     }
 
     @Transactional(readOnly = true)
@@ -60,6 +66,12 @@ public class CategoriaService {
                     "No se puede cambiar el tipo: la categoría tiene transacciones");
         }
         
+        if (c.getTipo() != req.tipo()
+                && (transaccionRepo.existsByCategoriaId(c.getId()) || presupuestoRepo.existsByCategoriaId(c.getId()))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede cambiar el tipo: la categoría tiene transacciones o presupuestos");
+        }
+        
         if (cambio) validarDuplicado(u.getId(), req);
 
         c.setNombre(req.nombre().trim());
@@ -74,6 +86,12 @@ public class CategoriaService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "No se puede eliminar: la categoría tiene transacciones");
         }
+        
+        if (transaccionRepo.existsByCategoriaId(c.getId()) || presupuestoRepo.existsByCategoriaId(c.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede eliminar: la categoría tiene transacciones o presupuestos");
+        }
+        
         repo.delete(c);
     }
 

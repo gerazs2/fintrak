@@ -26,10 +26,17 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", String.valueOf(ex.getReason())));
     }
 
-    // Nuevo: JSON mal formado o valor de enum inválido
+ 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, String>> jsonInvalido(HttpMessageNotReadableException ex) {
         return ResponseEntity.badRequest()
                 .body(Map.of("error", "JSON inválido o valor no permitido"));
+    }
+    
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, String>> parametroInvalido(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.badRequest()
+                .body(Map.of("error", "Valor inválido para el parámetro '" + ex.getName() + "'"));
     }
 }
