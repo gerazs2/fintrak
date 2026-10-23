@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Modifying;
 
 import com.jgmagalop.dto.TotalCategoria;
 
@@ -97,4 +98,8 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
     		                             @Param("categoriaId") Long categoriaId,
     		                             @Param("desde") LocalDate desde,
     		                             @Param("hasta") LocalDate hasta);
+    	
+    	@Modifying
+    	@Query("UPDATE Transaccion t SET t.recurrente = null WHERE t.recurrente.id = :rid")
+    	int desvincularDeRecurrente(@Param("rid") Long rid);
 }

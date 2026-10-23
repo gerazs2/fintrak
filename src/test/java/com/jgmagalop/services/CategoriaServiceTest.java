@@ -25,7 +25,8 @@ class CategoriaServiceTest {
     @Mock TransaccionRepository transaccionRepo;
     @Mock PresupuestoRepository presupuestoRepo;
     @Mock UsuarioActual usuarioActual;
-
+    @Mock RecurrenteRepository recurrenteRepo;
+    
     @InjectMocks CategoriaService service;
 
     Usuario usuario;

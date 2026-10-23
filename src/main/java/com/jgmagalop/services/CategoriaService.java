@@ -16,16 +16,19 @@ public class CategoriaService {
     private final TransaccionRepository transaccionRepo;
     private final PresupuestoRepository presupuestoRepo;
     private final UsuarioActual usuarioActual;
+    private final RecurrenteRepository recurrenteRepo;
 
     public CategoriaService( CategoriaRepository repo, 
     						 UsuarioActual usuarioActual, 
     						 TransaccionRepository transaccionRepo,
-    						 PresupuestoRepository presupuestoRepo
+    						 PresupuestoRepository presupuestoRepo,
+    						 RecurrenteRepository recurrenteRepo
     						) {
         this.repo = repo;
         this.usuarioActual = usuarioActual;
         this.transaccionRepo = transaccionRepo;
         this.presupuestoRepo = presupuestoRepo;
+        this.recurrenteRepo = recurrenteRepo;
     }
 
     @Transactional(readOnly = true)
@@ -60,18 +63,12 @@ public class CategoriaService {
         Categoria c = buscar(id, u.getId());
 
         boolean cambio = !c.getNombre().equalsIgnoreCase(req.nombre().trim()) || c.getTipo() != req.tipo();
-        
-        if (c.getTipo() != req.tipo() && transaccionRepo.existsByCategoriaId(c.getId())) {
+
+        if (c.getTipo() != req.tipo() && enUso(c.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "No se puede cambiar el tipo: la categoría tiene transacciones");
+                    "No se puede cambiar el tipo: la categoría tiene transacciones, presupuestos o recurrentes");
         }
-        
-        if (c.getTipo() != req.tipo()
-                && (transaccionRepo.existsByCategoriaId(c.getId()) || presupuestoRepo.existsByCategoriaId(c.getId()))) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "No se puede cambiar el tipo: la categoría tiene transacciones o presupuestos");
-        }
-        
+
         if (cambio) validarDuplicado(u.getId(), req);
 
         c.setNombre(req.nombre().trim());
@@ -82,16 +79,10 @@ public class CategoriaService {
     @Transactional
     public void eliminar(Long id) {
         Categoria c = buscar(id, usuarioActual.get().getId());
-        if (transaccionRepo.existsByCategoriaId(c.getId())) {
+        if (enUso(c.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "No se puede eliminar: la categoría tiene transacciones");
+                    "No se puede eliminar: la categoría tiene transacciones, presupuestos o recurrentes");
         }
-        
-        if (transaccionRepo.existsByCategoriaId(c.getId()) || presupuestoRepo.existsByCategoriaId(c.getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "No se puede eliminar: la categoría tiene transacciones o presupuestos");
-        }
-        
         repo.delete(c);
     }
 
@@ -104,5 +95,11 @@ public class CategoriaService {
         if (repo.existsByUsuarioIdAndNombreIgnoreCaseAndTipo(uid, req.nombre().trim(), req.tipo())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una categoría con ese nombre y tipo");
         }
+    }
+    
+    private boolean enUso(Long categoriaId) {
+        return transaccionRepo.existsByCategoriaId(categoriaId)
+                || presupuestoRepo.existsByCategoriaId(categoriaId)
+                || recurrenteRepo.existsByCategoriaId(categoriaId);
     }
 }

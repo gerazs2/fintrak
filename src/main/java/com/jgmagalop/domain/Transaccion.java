@@ -8,7 +8,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(indexes = @Index(columnList = "usuario_id, fecha"))
+@Table(
+	    indexes = @Index(columnList = "usuario_id, fecha"),
+	    uniqueConstraints = @UniqueConstraint(columnNames = {"recurrente_id", "fecha"})
+	)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -46,4 +49,8 @@ public class Transaccion {
     void prePersist() {
         creadoEn = LocalDateTime.now();
     }
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurrente_id")
+    private Recurrente recurrente;
 }

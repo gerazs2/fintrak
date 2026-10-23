@@ -116,6 +116,16 @@
 		    <scope>test</scope>
 		</dependency>
 		
+		<!-- Migraciones de base de datos -->
+		<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+		<dependency>
+		    <groupId>org.flywaydb</groupId>
+		    <artifactId>flyway-mysql</artifactId>
+		</dependency>
+		
 		<!-- Base de datos en memoria solo para tests -->
 		<dependency>
 		    <groupId>com.h2database</groupId>
