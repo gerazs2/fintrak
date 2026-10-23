@@ -1,6 +1,11 @@
 package com.jgmagalop;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.test.web.servlet.MvcResult;
+import java.nio.charset.StandardCharsets;
+
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
 
@@ -86,6 +91,37 @@ class TransaccionesIntegrationTest extends ApiTestBase {
         postJson(token, "/api/transacciones", """
                 {"monto":10.555,"fecha":"%s","categoriaId":%d}
                 """.formatted(inicioMes, cat))
+                .andExpect(status().isBadRequest());
+    }
+    
+    @Test
+    void exportarCsv_conEncabezadoEscapadoYProteccionDeFormulas() throws Exception {
+        String token = nuevoUsuarioConToken();
+        Integer cat = crearCategoria(token, "Comida", "GASTO");
+        crearTransaccion(token, cat, "250.50", inicioMes, "Super, frutas");
+        crearTransaccion(token, cat, "10", inicioMes, "=SUMA(A1)");
+
+        MvcResult res = mvc.perform(get("/api/transacciones/exportar").header("Authorization", token))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", containsString("attachment")))
+                .andExpect(header().string("Content-Disposition", containsString(".csv")))
+                .andExpect(content().contentTypeCompatibleWith("text/csv"))
+                .andReturn();
+
+        String csv = res.getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertTrue(csv.startsWith("\uFEFFFecha,Tipo,Categoría,Descripción,Monto,Origen"));
+        assertTrue(csv.contains("\"Super, frutas\""));   // la coma no rompe columnas
+        assertTrue(csv.contains("'=SUMA(A1)"));          // no se ejecuta como fórmula
+        assertTrue(csv.contains("250.50"));
+        assertTrue(csv.contains("Manual"));
+    }
+
+    @Test
+    void exportarCsv_fechasInvertidas_responde400() throws Exception {
+        String token = nuevoUsuarioConToken();
+
+        mvc.perform(get("/api/transacciones/exportar").header("Authorization", token)
+                        .param("desde", "2026-11-01").param("hasta", "2026-10-01"))
                 .andExpect(status().isBadRequest());
     }
 }

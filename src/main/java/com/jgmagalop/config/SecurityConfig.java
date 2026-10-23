@@ -51,6 +51,7 @@ public class SecurityConfig {
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(false);           // el JWT va en un header, no en cookies
         config.setMaxAge(Duration.ofHours(1));       // el navegador cachea el preflight 1 hora
+        config.setExposedHeaders(List.of("Content-Disposition"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);

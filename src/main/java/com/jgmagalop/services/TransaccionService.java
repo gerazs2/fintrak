@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
+import java.nio.charset.StandardCharsets;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -20,6 +22,7 @@ public class TransaccionService {
     private final UsuarioActual usuarioActual;
     
     private static final int TAMANIO_MAX = 100;
+    private static final int MAX_EXPORTAR = 10_000;
 
     public TransaccionService(TransaccionRepository repo,
                               CategoriaRepository categoriaRepo,
@@ -112,5 +115,53 @@ public class TransaccionService {
         t.setDescripcion(req.descripcion() == null ? null : req.descripcion().trim());
         t.setCategoria(c);
         t.setTipo(c.getTipo());   // el tipo viene de la categoría
+    }
+    
+    @Transactional(readOnly = true)
+    public ArchivoCsv exportarCsv(LocalDate desde, LocalDate hasta,
+                                  TipoMovimiento tipo, Long categoriaId, String q) {
+        YearMonth mes = YearMonth.now();
+        if (desde == null) desde = mes.atDay(1);
+        if (hasta == null) hasta = mes.atEndOfMonth();
+        if (desde.isAfter(hasta)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "'desde' no puede ser mayor que 'hasta'");
+        }
+        String texto = (q == null || q.isBlank()) ? null : q.trim();
+        Long uid = usuarioActual.get().getId();
+
+        Page<Transaccion> page = repo.buscar(uid, desde, hasta, tipo, categoriaId, texto,
+                PageRequest.of(0, MAX_EXPORTAR));
+        if (page.getTotalElements() > MAX_EXPORTAR) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Demasiadas transacciones (" + page.getTotalElements() + "). Reduce el rango de fechas o usa filtros");
+        }
+
+        StringBuilder sb = new StringBuilder("\uFEFF");   // BOM: Excel reconoce UTF-8
+        sb.append("Fecha,Tipo,Categoría,Descripción,Monto,Origen\r\n");
+        for (Transaccion t : page.getContent()) {
+            sb.append(t.getFecha()).append(',')
+              .append(t.getTipo()).append(',')
+              .append(celda(t.getCategoria().getNombre())).append(',')
+              .append(celda(t.getDescripcion())).append(',')
+              .append(t.getMonto().toPlainString()).append(',')
+              .append(t.getRecurrente() != null ? "Recurrente" : "Manual")
+              .append("\r\n");
+        }
+
+        String nombre = "fintrack_" + desde + "_" + hasta + ".csv";
+        return new ArchivoCsv(nombre, sb.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Escapa un valor de texto para CSV y evita que Excel lo interprete como fórmula. */
+    private String celda(String valor) {
+        if (valor == null) return "";
+        String v = valor;
+        if (!v.isEmpty() && "=+-@\t\r".indexOf(v.charAt(0)) >= 0) {
+            v = "'" + v;
+        }
+        if (v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r")) {
+            v = "\"" + v.replace("\"", "\"\"") + "\"";
+        }
+        return v;
     }
 }
