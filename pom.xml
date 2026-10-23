@@ -46,6 +46,13 @@
 		    <version>0.11.5</version>
 		    <scope>runtime</scope>
 		</dependency>
+		
+		<!-- Documentación OpenAPI / Swagger -->
+		<dependency>
+		    <groupId>org.springdoc</groupId>
+		    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+		    <version>3.1.1</version>
+		</dependency>
 
 		<!-- Data JPA + MySQL -->
 		<dependency>
@@ -101,6 +108,21 @@
 		</dependency>
 
 		<!-- Testing -->
+		
+		<!-- MockMvc para tests (Spring Boot 4) -->
+		<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-webmvc-test</artifactId>
+		    <scope>test</scope>
+		</dependency>
+		
+		<!-- Base de datos en memoria solo para tests -->
+		<dependency>
+		    <groupId>com.h2database</groupId>
+		    <artifactId>h2</artifactId>
+		    <scope>test</scope>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>

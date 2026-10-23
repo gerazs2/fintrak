@@ -23,12 +23,15 @@ public class TransaccionController {
     }
 
     @GetMapping
-    public List<TransaccionResponse> listar(
+    public PageResponse<TransaccionResponse> listar(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
             @RequestParam(required = false) TipoMovimiento tipo,
-            @RequestParam(required = false) Long categoriaId) {
-        return service.listar(desde, hasta, tipo, categoriaId);
+            @RequestParam(required = false) Long categoriaId,
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return service.listar(desde, hasta, tipo, categoriaId, q, page, size);
     }
 
     @GetMapping("/{id}")

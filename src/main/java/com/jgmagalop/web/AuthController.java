@@ -6,9 +6,13 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.Map;
 
+@Tag(name = "Autenticación", description = "Registro e inicio de sesión")
+@SecurityRequirements   // vacío = sin token
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {

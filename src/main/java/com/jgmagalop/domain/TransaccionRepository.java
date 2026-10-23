@@ -4,6 +4,8 @@ package com.jgmagalop.domain;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import com.jgmagalop.dto.TotalCategoria;
 
@@ -18,7 +20,7 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
 
     boolean existsByCategoriaId(Long categoriaId);
 
-    @Query("""
+   /* @Query("""
            SELECT t FROM Transaccion t
            JOIN FETCH t.categoria
            WHERE t.usuario.id = :uid
@@ -31,7 +33,34 @@ public interface TransaccionRepository extends JpaRepository<Transaccion, Long> 
                              @Param("desde") LocalDate desde,
                              @Param("hasta") LocalDate hasta,
                              @Param("tipo") TipoMovimiento tipo,
-                             @Param("categoriaId") Long categoriaId);
+                             @Param("categoriaId") Long categoriaId);*/
+    
+
+	@Query(value = """
+	       SELECT t FROM Transaccion t
+	       JOIN FETCH t.categoria
+	       WHERE t.usuario.id = :uid
+	         AND t.fecha BETWEEN :desde AND :hasta
+	         AND (:tipo IS NULL OR t.tipo = :tipo)
+	         AND (:categoriaId IS NULL OR t.categoria.id = :categoriaId)
+	         AND (:q IS NULL OR LOWER(t.descripcion) LIKE LOWER(CONCAT('%', :q, '%')))
+	       ORDER BY t.fecha DESC, t.id DESC
+	       """,
+	       countQuery = """
+	       SELECT COUNT(t) FROM Transaccion t
+	       WHERE t.usuario.id = :uid
+	         AND t.fecha BETWEEN :desde AND :hasta
+	         AND (:tipo IS NULL OR t.tipo = :tipo)
+	         AND (:categoriaId IS NULL OR t.categoria.id = :categoriaId)
+	         AND (:q IS NULL OR LOWER(t.descripcion) LIKE LOWER(CONCAT('%', :q, '%')))
+	       """)
+	Page<Transaccion> buscar(@Param("uid") Long uid,
+	                         @Param("desde") LocalDate desde,
+	                         @Param("hasta") LocalDate hasta,
+	                         @Param("tipo") TipoMovimiento tipo,
+	                         @Param("categoriaId") Long categoriaId,
+	                         @Param("q") String q,
+	                         Pageable pageable);
     
     @Query("""
     	       SELECT COALESCE(SUM(t.monto), 0) FROM Transaccion t

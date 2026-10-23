@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -17,6 +18,8 @@ public class TransaccionService {
     private final TransaccionRepository repo;
     private final CategoriaRepository categoriaRepo;
     private final UsuarioActual usuarioActual;
+    
+    private static final int TAMANIO_MAX = 100;
 
     public TransaccionService(TransaccionRepository repo,
                               CategoriaRepository categoriaRepo,
@@ -27,6 +30,32 @@ public class TransaccionService {
     }
 
     @Transactional(readOnly = true)
+    public PageResponse<TransaccionResponse> listar(LocalDate desde, LocalDate hasta,
+                                                    TipoMovimiento tipo, Long categoriaId,
+                                                    String q, int page, int size) {
+        YearMonth mes = YearMonth.now();
+        if (desde == null) desde = mes.atDay(1);
+        if (hasta == null) hasta = mes.atEndOfMonth();
+        if (desde.isAfter(hasta)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "'desde' no puede ser mayor que 'hasta'");
+        }
+        if (page < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "'page' no puede ser negativo");
+        }
+        if (size < 1 || size > TAMANIO_MAX) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "'size' debe estar entre 1 y " + TAMANIO_MAX);
+        }
+
+        // Búsqueda vacía o solo espacios = sin filtro
+        String texto = (q == null || q.isBlank()) ? null : q.trim();
+
+        Long uid = usuarioActual.get().getId();
+        return PageResponse.from(
+                repo.buscar(uid, desde, hasta, tipo, categoriaId, texto, PageRequest.of(page, size)),
+                TransaccionResponse::from);
+    }
+    
+    /*@Transactional(readOnly = true)
     public List<TransaccionResponse> listar(LocalDate desde, LocalDate hasta,
                                             TipoMovimiento tipo, Long categoriaId) {
         // Por defecto: el mes actual
@@ -40,7 +69,7 @@ public class TransaccionService {
         Long uid = usuarioActual.get().getId();
         return repo.buscar(uid, desde, hasta, tipo, categoriaId)
                 .stream().map(TransaccionResponse::from).toList();
-    }
+    }*/
 
     @Transactional(readOnly = true)
     public TransaccionResponse obtener(Long id) {
