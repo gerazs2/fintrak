@@ -60,6 +60,6 @@ public class PerfilService {
         usuarioRepository.save(u);
 
         // Token nuevo para que la sesión actual siga activa
-        return new AuthResponse(jwtUtil.generarToken(u.getEmail()));
+        return new AuthResponse(jwtUtil.generarToken(u.getEmail()),u.getNombre());
     }
 }

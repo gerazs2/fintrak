@@ -38,7 +38,7 @@ public class UsuarioService {
     public AuthResponse login(LoginRequest req) {
         return usuarioRepository.findByEmail(req.email())
                 .filter(u -> passwordEncoder.matches(req.password(), u.getPassword()))
-                .map(u -> new AuthResponse(jwtUtil.generarToken(u.getEmail())))
+                .map(u -> new AuthResponse(jwtUtil.generarToken(u.getEmail()),u.getNombre()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas"));
     }
 }
