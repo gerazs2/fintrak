@@ -3,19 +3,24 @@ package com.jgmagalop.services;
 import com.jgmagalop.domain.TipoMovimiento;
 import com.jgmagalop.domain.TransaccionRepository;
 import com.jgmagalop.dto.*;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class ResumenService {
 
     private static final BigDecimal CIEN = BigDecimal.valueOf(100);
+    private static final int MAX_MESES = 24;
 
     private final TransaccionRepository repo;
     private final UsuarioActual usuarioActual;
@@ -25,6 +30,35 @@ public class ResumenService {
         this.usuarioActual = usuarioActual;
     }
 
+    @Transactional(readOnly = true)
+    public List<TendenciaMes> tendencia(int meses) {
+        if (meses < 1 || meses > MAX_MESES) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "'meses' debe estar entre 1 y " + MAX_MESES);
+        }
+
+        Long uid = usuarioActual.get().getId();
+        YearMonth actual = YearMonth.now();
+        List<TendenciaMes> lista = new ArrayList<>();
+
+        // Del mes más antiguo al actual
+        for (int i = meses - 1; i >= 0; i--) {
+            YearMonth mes = actual.minusMonths(i);
+            LocalDate desde = mes.atDay(1);
+            LocalDate hasta = mes.atEndOfMonth();
+
+            BigDecimal ingresos = repo.sumarPorTipo(uid, TipoMovimiento.INGRESO, desde, hasta);
+            BigDecimal gastos   = repo.sumarPorTipo(uid, TipoMovimiento.GASTO, desde, hasta);
+
+            lista.add(new TendenciaMes(
+                    mes.toString(),
+                    ingresos.setScale(2, RoundingMode.HALF_UP),
+                    gastos.setScale(2, RoundingMode.HALF_UP),
+                    ingresos.subtract(gastos).setScale(2, RoundingMode.HALF_UP)));
+        }
+        return lista;
+    }
+    
     @Transactional(readOnly = true)
     public ResumenResponse mensual(YearMonth mes) {
         if (mes == null) mes = YearMonth.now();
